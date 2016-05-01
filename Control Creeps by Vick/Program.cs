@@ -35,20 +35,20 @@ namespace Control_Creeps
             var mn_KeySetting = new Menu("Keys Setting", "Keys Setting");
             mn_KeySetting.AddItem(new MenuItem("Toogle Key", "Toogle Key").SetValue(new KeyBind('T', KeyBindType.Toggle)));
             mn_KeySetting.AddItem(new MenuItem("Press Key", "Press Key").SetValue(new KeyBind('F', KeyBindType.Press)));
-            mn_KeySetting.AddItem(new MenuItem("Lock target Key", "Lock target Key").SetValue(new KeyBind('G', KeyBindType.Press)));
+            mn_KeySetting.AddItem(new MenuItem("Lock target Key", "Lock target Key").SetValue(new KeyBind('G', KeyBindType.Press)).SetTooltip("Lock a target closest mouse."));
             Menu.AddSubMenu(mn_KeySetting);
 
             var mn_GlobalSetting = new Menu("Global Setting", "Global Setting");
             //mn_GlobalSetting.AddItem(new MenuItem("Control mode", "Control mode").SetValue(new StringList(new[] { "Combat mode", "Push mode", "Protect mode"})));
             mn_GlobalSetting.AddItem(new MenuItem("Target find range", "Target find range").SetValue(new Slider(1550, 0, 2000)).SetTooltip("Range from mouse to find TargetNow Hero."));
-            mn_GlobalSetting.AddItem(new MenuItem("Target mode", "Target mode").SetValue(new StringList(new[] { "ClosesToMouse", "LowestHealth" })));
+            mn_GlobalSetting.AddItem(new MenuItem("Target mode", "Target mode").SetValue(new StringList(new[] { "ClosesFindSource", "LowestHealth" })));
             mn_GlobalSetting.AddItem(new MenuItem("Target find source", "Target find source").SetValue(new StringList(new[] { "Me", "Mouse" })));
-            mn_GlobalSetting.AddItem(new MenuItem("Combat range", "Combat range").SetValue(new Slider(2000, 0, 3000)).SetTooltip("Unit will move to attack Target in Combat range from itself."));
+            mn_GlobalSetting.AddItem(new MenuItem("Combat range", "Combat range").SetValue(new Slider(2000, 0, 5000)).SetTooltip("Unit will move to attack Target in Combat range from itself."));
 
             Menu.AddSubMenu(mn_GlobalSetting);
-            
+
             //var mn_CombatSetting = new Menu("Combat setting", "Combat setting");
-            //mn_CombatSetting.AddItem(new MenuItem("Combat mode", "Combat mode").SetValue(new StringList(new[] { "FocusOneTarget", "DisableMultiTarget"})));
+            //mn_CombatSetting.AddItem(new MenuItem("Combat mode", "Combat mode").SetValue(new StringList(new[] { "MaxDisableOneTarget", "DisableMultiTarget" })));
             //Menu.AddSubMenu(mn_CombatSetting);
 
             //var mn_PushSetting = new Menu("Push setting", "Push setting");
@@ -108,6 +108,7 @@ namespace Control_Creeps
             var TargetFindRange = Menu.Item("Target find range").GetValue<Slider>().Value;
             var TargetFindSource = Menu.Item("Target find source").GetValue<StringList>().SelectedIndex;
 
+            //var CombatMode = Menu.Item("Combat mode").GetValue<StringList>().SelectedIndex;
 
             if (lockTargetKey)
             {
