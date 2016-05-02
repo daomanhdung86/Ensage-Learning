@@ -15,8 +15,8 @@ namespace Control_Creeps
     {
         // Declare a Menu
         private static readonly Menu Menu = new Menu("Control Creeps", "Control Creeps", true);
-        private static Hero TargetNow = new Hero();
-        private static Hero TargetLock = new Hero();
+        private static Hero TargetNow = null;
+        private static Hero TargetLock = null;
 
         private static string test_meDistant;
         private static string test_allyDistant;
@@ -39,17 +39,17 @@ namespace Control_Creeps
             Menu.AddSubMenu(mn_KeySetting);
 
             var mn_GlobalSetting = new Menu("Global Setting", "Global Setting");
-            //mn_GlobalSetting.AddItem(new MenuItem("Control mode", "Control mode").SetValue(new StringList(new[] { "Combat mode", "Push mode", "Protect mode"})));
+            //mn_GlobalSetting.AddItem(new MenuItem("Control mode", "Control mode").SetValue(new StringList(new[] { "Combat mode", "Push mode", "Protect mode" })));
             mn_GlobalSetting.AddItem(new MenuItem("Target find range", "Target find range").SetValue(new Slider(1550, 0, 2000)).SetTooltip("Range from mouse to find TargetNow Hero."));
             mn_GlobalSetting.AddItem(new MenuItem("Target mode", "Target mode").SetValue(new StringList(new[] { "ClosesFindSource", "LowestHealth" })));
             mn_GlobalSetting.AddItem(new MenuItem("Target find source", "Target find source").SetValue(new StringList(new[] { "Me", "Mouse" })));
-            mn_GlobalSetting.AddItem(new MenuItem("Combat range", "Combat range").SetValue(new Slider(2000, 0, 5000)).SetTooltip("Unit will move to attack Target in Combat range from itself."));
-
+            mn_GlobalSetting.AddItem(new MenuItem("Delete lock target when Off", "Delete lock target when Off").SetValue(false));
             Menu.AddSubMenu(mn_GlobalSetting);
 
-            //var mn_CombatSetting = new Menu("Combat setting", "Combat setting");
-            //mn_CombatSetting.AddItem(new MenuItem("Combat mode", "Combat mode").SetValue(new StringList(new[] { "MaxDisableOneTarget", "DisableMultiTarget" })));
-            //Menu.AddSubMenu(mn_CombatSetting);
+            var mn_CombatSetting = new Menu("Combat setting", "Combat setting");
+            mn_CombatSetting.AddItem(new MenuItem("Combat range", "Combat range").SetValue(new Slider(2000, 0, 5000)).SetTooltip("Unit will move to attack Target in Combat range from itself."));
+            mn_CombatSetting.AddItem(new MenuItem("Combat mode", "Combat mode").SetValue(new StringList(new[] { "MaxDisableOneTarget", "DisableMultiTarget" })));
+            Menu.AddSubMenu(mn_CombatSetting);
 
             //var mn_PushSetting = new Menu("Push setting", "Push setting");
             //Menu.AddSubMenu(mn_PushSetting);
@@ -231,11 +231,6 @@ namespace Control_Creeps
                             var CheckPurge = TargetNow.Modifiers.Any(y => y.Name == "modifier_satyr_trickster_purge");
                             var CheckSlam = TargetNow.Modifiers.Any(y => y.Name == "modifier_big_thunder_lizard_slam");
 
-                            var Neutrals = ObjectManager.GetEntities<Creep>().Where(creep => (creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Lane || creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Siege || creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Neutral || creep.ClassID == ClassID.CDOTA_BaseNPC_Invoker_Forged_Spirit || creep.ClassID == ClassID.CDOTA_BaseNPC_Creep &&
-                                creep.IsAlive && creep.IsVisible && creep.IsSpawned) && creep.Team == me.GetEnemyTeam()).ToList();
-                            var Neutral = ObjectManager.GetEntities<Creep>().Where(creep => (creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Neutral &&
-                                creep.IsAlive ) && creep.Team == me.GetEnemyTeam()).ToList();
-
                             switch (v.ClassID)
                             {
                                 case ClassID.CDOTA_BaseNPC_Tusk_Sigil:
@@ -246,6 +241,11 @@ namespace Control_Creeps
                                     }
                                     break;
                                 case ClassID.CDOTA_Unit_SpiritBear:
+                                    var Neutrals = ObjectManager.GetEntities<Creep>().Where(creep => (creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Lane || creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Siege || creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Neutral || creep.ClassID == ClassID.CDOTA_BaseNPC_Invoker_Forged_Spirit || creep.ClassID == ClassID.CDOTA_BaseNPC_Creep &&
+                                        creep.IsAlive && creep.IsVisible && creep.IsSpawned) && creep.Team == me.GetEnemyTeam()).ToList();
+                                    //var Neutral = ObjectManager.GetEntities<Creep>().Where(creep => (creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Neutral &&
+                                    //    creep.IsAlive ) && creep.Team == me.GetEnemyTeam()).ToList();
+
                                     if ((!me.AghanimState() && me.Position.Distance2D(v) <= 1200) || me.AghanimState())
 	                                {
 						                if (abyssal == null)
@@ -587,6 +587,13 @@ namespace Control_Creeps
                     }
                 }
 			}
+            else
+            {
+                if (Menu.Item("Delete lock target when Off").GetValue<bool>())
+                {
+                    TargetLock = null;
+                }
+            }
 		}
         static void CurrentDomain_DomainUnload(object sender, EventArgs e)
         {
