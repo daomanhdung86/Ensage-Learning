@@ -22,7 +22,7 @@ namespace ScanWard
         private static bool scan, oneturn;
         private static bool OldVisible;
 
-        private static List<Vector3> PosList = new List<Vector3>();
+        private static List<Ensage.Common.Objects.DrawObjects.Circle> CircleList = new List<Ensage.Common.Objects.DrawObjects.Circle>();
 
         static void Main(string[] args)
         {
@@ -46,9 +46,9 @@ namespace ScanWard
             Menu1.AddToMainMenu();
 
             scan = false;
-            if (PosList != null)
+            if (CircleList != null)
             {
-                PosList.Clear();
+                CircleList.Clear();
             }
             OldVisible = h_me.IsVisibleToEnemies;
 
@@ -103,12 +103,12 @@ namespace ScanWard
                 scan = true;
                 if (h_me.IsVisibleToEnemies != OldVisible)
                 {
-                    if (PosList != null)
+                    if (CircleList != null)
                     {
                         bool check = false;
-                        foreach (Vector3 v in PosList)
+                        foreach (Ensage.Common.Objects.DrawObjects.Circle v in CircleList)
                         {
-                            if (Vector3.Distance(h_me.Position, v) < Menu1.Item("o_MinRange").GetValue<Slider>().Value)
+                            if (Vector3.Distance(h_me.Position, v.WorldPosition) < Menu1.Item("o_MinRange").GetValue<Slider>().Value)
                             {
                                 check = true;
                                 break;
@@ -116,13 +116,13 @@ namespace ScanWard
                         }
                         if (check == false)
                         {
-                            PosList.Add(h_me.Position);
+                            CircleList.Add(new Ensage.Common.Objects.DrawObjects.Circle(h_me.Position, Menu1.Item("o_WardRange").GetValue<Slider>().Value));
                             OldVisible = h_me.IsVisibleToEnemies;
                         }
                     }
                     else
                     {
-                        PosList.Add(h_me.Position);
+                        CircleList.Add(new Ensage.Common.Objects.DrawObjects.Circle(h_me.Position, Menu1.Item("o_WardRange").GetValue<Slider>().Value));
                         OldVisible = h_me.IsVisibleToEnemies;
                     }
                 }
@@ -135,9 +135,9 @@ namespace ScanWard
             if (k_Clear)
             {
                 scan = false;
-                if (PosList != null)
+                if (CircleList != null)
                 {
-                    PosList.Clear();
+                    CircleList.Clear();
                 }
             }
         }
@@ -148,13 +148,12 @@ namespace ScanWard
                 return;
             if (scan)
             {
-                if (PosList != null)
+                if (CircleList != null)
                 {
-                    for (int i=0; i < PosList.Count; i++)
+                    for (int i=0; i < CircleList.Count; i++)
                     {
-                        var circle = new Ensage.Common.Objects.DrawObjects.Circle(PosList[i], Menu1.Item("o_WardRange").GetValue<Slider>().Value);
-                        circle.Draw(Color.Orange);
-                        Drawing.DrawText(i.ToString(), Drawing.WorldToScreen(PosList[i]), Color.Orange, FontFlags.None);
+                        CircleList[i].Draw(Color.Orange);
+                        Drawing.DrawText((i + 1).ToString(), Drawing.WorldToScreen(CircleList[i].WorldPosition), Color.Orange, FontFlags.None);
                     }
                 }
             }
