@@ -12,6 +12,31 @@ namespace ScanWard
 {
     internal class Program
     {
+        public class ScanedPoint
+        {
+            public Vector3 Position
+            {
+                get;
+                set;
+            }
+            public bool IsSentry
+            {
+                get;
+                set;
+            }
+            public ParticleEffect ParticleEffect
+            {
+                get;
+                set;
+            }
+            public Ensage.Common.Objects.DrawObjects.Circle Circle
+            {
+                get;
+                set;
+            }
+        }
+
+
         private static readonly Menu Menu1 = new Menu("Scan Ward", "ScanWard", true);
         private static Font txt;
         private static Font not;
@@ -22,7 +47,9 @@ namespace ScanWard
         private static bool scan, oneturn;
         private static bool OldVisible;
 
-        private static List<Ensage.Common.Objects.DrawObjects.Circle> CircleList = new List<Ensage.Common.Objects.DrawObjects.Circle>();
+
+
+        private static List<ScanedPoint> ScanedList = new List<ScanedPoint>();
 
         static void Main(string[] args)
         {
@@ -39,16 +66,21 @@ namespace ScanWard
             keySetting.AddItem(new MenuItem("k_Clear", "Clear key").SetValue(new KeyBind('B', KeyBindType.Press)).SetTooltip("Press to clear all scaned point."));
             Menu1.AddSubMenu(keySetting);
             var OptionSetting = new Menu("Options", "Options");
-            OptionSetting.AddItem(new MenuItem("o_WardRange", "Range of ward").SetValue(new Slider(1700, 1000, 2000)).SetTooltip("Vision range of Observer ward."));
+            OptionSetting.AddItem(new MenuItem("o_WardRange", "Range of Observer ward").SetValue(new Slider(1700, 500, 2000)).SetTooltip("Vision range of Observer ward."));
+            OptionSetting.AddItem(new MenuItem("o_SentryRange", "Range of Sentry ward").SetValue(new Slider(850, 500, 2000)).SetTooltip("Vision range of Sentry ward."));
             OptionSetting.AddItem(new MenuItem("o_MinRange", "Minimum space beetwen 2 scan point").SetValue(new Slider(300, 100, 800)).SetTooltip("Min distance between 2 scan point."));
             Menu1.AddSubMenu(OptionSetting);
 
             Menu1.AddToMainMenu();
 
             scan = false;
-            if (CircleList != null)
+            if (ScanedList != null)
             {
-                CircleList.Clear();
+                foreach (ScanedPoint v in ScanedList)
+                {
+                    v.ParticleEffect.Dispose();
+                }
+                ScanedList.Clear();
             }
             OldVisible = h_me.IsVisibleToEnemies;
 
@@ -103,12 +135,12 @@ namespace ScanWard
                 scan = true;
                 if (h_me.IsVisibleToEnemies != OldVisible)
                 {
-                    if (CircleList != null)
+                    if (ScanedList != null)
                     {
                         bool check = false;
-                        foreach (Ensage.Common.Objects.DrawObjects.Circle v in CircleList)
+                        foreach (ScanedPoint v in ScanedList)
                         {
-                            if (Vector3.Distance(h_me.Position, v.WorldPosition) < Menu1.Item("o_MinRange").GetValue<Slider>().Value)
+                            if (Vector3.Distance(h_me.Position, v.Position) < Menu1.Item("o_MinRange").GetValue<Slider>().Value)
                             {
                                 check = true;
                                 break;
@@ -116,14 +148,58 @@ namespace ScanWard
                         }
                         if (check == false)
                         {
-                            CircleList.Add(new Ensage.Common.Objects.DrawObjects.Circle(h_me.Position, Menu1.Item("o_WardRange").GetValue<Slider>().Value));
-                            OldVisible = h_me.IsVisibleToEnemies;
+                            if (h_me.IsInvisible())
+                            {
+                                var newCircle = new ScanedPoint();
+                                newCircle.Position = h_me.Position;
+                                newCircle.IsSentry = true;
+                                newCircle.ParticleEffect = new ParticleEffect("particles/ui_mouseactions/drag_selected_ring.vpcf", h_me.Position);
+                                newCircle.ParticleEffect.SetControlPoint(1, new Vector3(0, 91, 237));
+                                newCircle.ParticleEffect.SetControlPoint(2, new Vector3(Menu1.Item("o_SentryRange").GetValue<Slider>().Value * -1, 255, 0));
+
+                                ScanedList.Add(newCircle);
+                                OldVisible = h_me.IsVisibleToEnemies;
+                            }
+                            else
+                            {
+                                var newCircle = new ScanedPoint();
+                                newCircle.Position = h_me.Position;
+                                newCircle.IsSentry = false;
+                                newCircle.ParticleEffect = new ParticleEffect("particles/ui_mouseactions/drag_selected_ring.vpcf", h_me.Position);
+                                newCircle.ParticleEffect.SetControlPoint(1, new Vector3(255, 221, 0));
+                                newCircle.ParticleEffect.SetControlPoint(2, new Vector3(Menu1.Item("o_WardRange").GetValue<Slider>().Value * -1, 255, 0));
+
+                                ScanedList.Add(newCircle);
+                                OldVisible = h_me.IsVisibleToEnemies;
+                            }
                         }
                     }
                     else
                     {
-                        CircleList.Add(new Ensage.Common.Objects.DrawObjects.Circle(h_me.Position, Menu1.Item("o_WardRange").GetValue<Slider>().Value));
-                        OldVisible = h_me.IsVisibleToEnemies;
+                        if (h_me.IsInvisible())
+                        {
+                            var newCircle = new ScanedPoint();
+                            newCircle.Position = h_me.Position;
+                            newCircle.IsSentry = true;
+                            newCircle.ParticleEffect = new ParticleEffect("particles/ui_mouseactions/drag_selected_ring.vpcf", h_me.Position);
+                            newCircle.ParticleEffect.SetControlPoint(1, new Vector3(0, 91, 237));
+                            newCircle.ParticleEffect.SetControlPoint(2, new Vector3(Menu1.Item("o_SentryRange").GetValue<Slider>().Value * -1, 255, 0));
+
+                            ScanedList.Add(newCircle);
+                            OldVisible = h_me.IsVisibleToEnemies;
+                        }
+                        else
+                        {
+                            var newCircle = new ScanedPoint();
+                            newCircle.Position = h_me.Position;
+                            newCircle.IsSentry = false;
+                            newCircle.ParticleEffect = new ParticleEffect("particles/ui_mouseactions/drag_selected_ring.vpcf", h_me.Position);
+                            newCircle.ParticleEffect.SetControlPoint(1, new Vector3(255, 221, 0));
+                            newCircle.ParticleEffect.SetControlPoint(2, new Vector3(Menu1.Item("o_WardRange").GetValue<Slider>().Value * -1, 255, 0));
+
+                            ScanedList.Add(newCircle);
+                            OldVisible = h_me.IsVisibleToEnemies;
+                        }
                     }
                 }
             }
@@ -135,9 +211,14 @@ namespace ScanWard
             if (k_Clear)
             {
                 scan = false;
-                if (CircleList != null)
+
+                if (ScanedList != null)
                 {
-                    CircleList.Clear();
+                    foreach (ScanedPoint v in ScanedList)
+                    {
+                        v.ParticleEffect.Dispose();
+                    }
+                    ScanedList.Clear();
                 }
             }
         }
@@ -148,12 +229,11 @@ namespace ScanWard
                 return;
             if (scan)
             {
-                if (CircleList != null)
+                if (ScanedList != null)
                 {
-                    for (int i=0; i < CircleList.Count; i++)
+                    for (int i=0; i < ScanedList.Count; i++)
                     {
-                        CircleList[i].Draw(Color.Orange);
-                        Drawing.DrawText((i + 1).ToString(), Drawing.WorldToScreen(CircleList[i].WorldPosition), Color.Orange, FontFlags.None);
+                        Drawing.DrawText((i + 1).ToString(), Drawing.WorldToScreen(ScanedList[i].Position), Color.Orange, FontFlags.None);
                     }
                 }
             }
