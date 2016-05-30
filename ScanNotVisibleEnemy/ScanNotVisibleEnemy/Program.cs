@@ -900,6 +900,52 @@ namespace ScanNotVisibleEnemy
                 }
             }
         }
+        // This function copy from VisionControl
+        private static Vector2 WorldToMiniMap(Vector3 Pos, int size)
+        {
+            const float MapLeft = -8000;
+            const float MapTop = 7350;
+            const float MapRight = 7500;
+            const float MapBottom = -7200;
+            var MapWidth = Math.Abs(MapLeft - MapRight);
+            var MapHeight = Math.Abs(MapBottom - MapTop);
+
+            var _x = Pos.X - MapLeft;
+            var _y = Pos.Y - MapBottom;
+
+            float dx, dy, px, py;
+            if (Math.Round((float)Drawing.Width / Drawing.Height, 1) >= 1.7)
+            {
+                dx = 272f / 1920f * Drawing.Width;
+                dy = 261f / 1080f * Drawing.Height;
+                px = 11f / 1920f * Drawing.Width;
+                py = 11f / 1080f * Drawing.Height;
+            }
+            else if (Math.Round((float)Drawing.Width / Drawing.Height, 1) >= 1.5)
+            {
+                dx = 267f / 1680f * Drawing.Width;
+                dy = 252f / 1050f * Drawing.Height;
+                px = 10f / 1680f * Drawing.Width;
+                py = 11f / 1050f * Drawing.Height;
+            }
+            else
+            {
+                dx = 255f / 1280f * Drawing.Width;
+                dy = 229f / 1024f * Drawing.Height;
+                px = 6f / 1280f * Drawing.Width;
+                py = 9f / 1024f * Drawing.Height;
+            }
+            var MinimapMapScaleX = dx / MapWidth;
+            var MinimapMapScaleY = dy / MapHeight;
+
+            var scaledX = Math.Min(Math.Max(_x * MinimapMapScaleX, 0), dx);
+            var scaledY = Math.Min(Math.Max(_y * MinimapMapScaleY, 0), dy);
+
+            var screenX = px + scaledX;
+            var screenY = Drawing.Height - scaledY - py;
+
+            return new Vector2((float)Math.Floor(screenX - size * 1.8), (float)Math.Floor(screenY - size * 2.7));
+        }
         private static void RelationAnalysys()
         {
             uint NotVisibleEnemyHeroes = GetNotVisibleEnemyHero();
@@ -1032,7 +1078,7 @@ namespace ScanNotVisibleEnemy
             OptionSetting.AddItem(new MenuItem("AlarmColorR", "Alarm color R").SetValue(new Slider(204, 0, 255)).SetTooltip("Color of alarm ring."));
             OptionSetting.AddItem(new MenuItem("AlarmColorG", "Alarm color G").SetValue(new Slider(0, 0, 255)).SetTooltip("Color of alarm ring."));
             OptionSetting.AddItem(new MenuItem("AlarmColorB", "Alarm color B").SetValue(new Slider(0, 0, 255)).SetTooltip("Color of alarm ring."));
-
+            OptionSetting.AddItem(new MenuItem("AlarmTextSize", "Alarm text size").SetValue(new Slider(5, 0, 10)).SetTooltip("Text size alarm."));
             Menu.AddSubMenu(OptionSetting);
 
             Menu.AddToMainMenu();
@@ -1123,16 +1169,21 @@ namespace ScanNotVisibleEnemy
             var player = ObjectManager.LocalPlayer;
             if (player == null || player.Team == Team.Observer || h_me == null)
                 return;
+            int TextSize = Menu.Item("AlarmTextSize").GetValue<Slider>().Value;
 
             foreach (AlarmWarning v in ListAlarm )
             {
+
                 if (v.AlarmCount <= 5)
                 {
-                    Drawing.DrawText("[" + v.AlarmCount.ToString() + "]", Drawing.WorldToScreen(v.Position), Color.Red, FontFlags.Underline);
+                    Drawing.DrawText("[" + v.AlarmCount.ToString() + "]", Drawing.WorldToScreen(v.Position), new Vector2(TextSize * 10, TextSize * 10), Color.Red, FontFlags.Underline);
+                    Drawing.DrawText("[" + v.AlarmCount.ToString() + "]", WorldToMiniMap(v.Position, TextSize), new Vector2(TextSize * 10, TextSize * 10), Color.Red, FontFlags.Underline);
                 }
                 else
                 {
-                    Drawing.DrawText((v.AlarmCount - 5).ToString(), Drawing.WorldToScreen(v.Position), Color.Red, FontFlags.None);
+                    Drawing.DrawText((v.AlarmCount - 5).ToString(), Drawing.WorldToScreen(v.Position), new Vector2(TextSize * 10, TextSize * 10), Color.Red, FontFlags.None);
+                    Drawing.DrawText((v.AlarmCount - 5).ToString(), WorldToMiniMap(v.Position, TextSize), new Vector2(TextSize * 10, TextSize * 10), Color.Red, FontFlags.Underline);
+
                 }
             }
 
