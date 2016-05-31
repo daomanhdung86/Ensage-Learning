@@ -38,7 +38,7 @@ namespace ScanNotVisibleEnemy
             }
             public AlarmWarning (Vector3 pPosition, uint pAlarmCount)
             {
-                //Console.WriteLine(pPosition.ToString() + "=" + pAlarmCount.ToString());
+                //Console.WriteLine("                               " + pPosition.ToString() + " = " + pAlarmCount.ToString());
                 Position = pPosition;
                 AlarmCount = pAlarmCount;
                 ParticleEffect = new ParticleEffect("particles/ui_mouseactions/drag_selected_ring.vpcf", pPosition);
@@ -49,22 +49,18 @@ namespace ScanNotVisibleEnemy
         }
         public class HeroExpand
         {
+            #region FIELDS
+            public uint HeroHandle
+            {
+                get;
+                set;
+            }
             public Hero Hero
             {
                 get;
                 set;
             }
-            public bool Check
-            {
-                get;
-                set;
-            }
-            public float LastVisibleTime
-            {
-                get;
-                set;
-            }
-            public uint HeroHandle
+            public Ensage.LifeState OldLifeState
             {
                 get;
                 set;
@@ -74,7 +70,32 @@ namespace ScanNotVisibleEnemy
                 get;
                 set;
             }
-            public uint XPReviceinTick
+            public bool IsDead
+            {
+                get;
+                set;
+            }
+            public float DeadTime
+            {
+                get;
+                set;
+            }
+            public float RespawnTime
+            {
+                get;
+                set;
+            }
+            public float LastVisibleTime
+            {
+                get;
+                set;
+            }
+            public Vector3 LasVisiblePostion
+            {
+                get;
+                set;
+            }
+            public bool IsHaveTP
             {
                 get;
                 set;
@@ -84,22 +105,56 @@ namespace ScanNotVisibleEnemy
                 get;
                 set;
             }
-            public int UnitsCount()
+            #endregion
+            #region METHODS
+            public HeroExpand(Hero x)
             {
-                if (UnitsProvideXPToThisHero != null)
+                HeroHandle = x.Handle;
+                Hero = x;
+                OldLifeState = x.LifeState;
+                OldXP = x.CurrentXP;
+                IsDead = true;
+                DeadTime = 0;
+                RespawnTime = 0;
+                LastVisibleTime = Game.GameTime;
+                LasVisiblePostion = x.Position;
+                IsHaveTP = ((x.FindItem("item_tpscroll") != null) || (x.FindItem("item_travel_boots") != null) || (x.FindItem("item_travel_boots") != null));
+                UnitsProvideXPToThisHero = new List<Unit>();
+                UnitsProvideXPToThisHero.Clear();
+            }
+            public void Update(Hero x)
+            {
+                if (x.LifeState == LifeState.Dying)
                 {
-                    if (UnitsProvideXPToThisHero.Count > 0)
+                    if (OldLifeState == LifeState.Alive)
                     {
-                        return UnitsProvideXPToThisHero.Count;
-                    }
-                    else
-                    {
-                        return 0;
+                        IsDead = true;
+                        DeadTime = Game.GameTime;
+                        RespawnTime = DeadTime + (x.RespawnTime - x.DeathTime) - 1f;
                     }
                 }
-                else
+                Hero = x;
+                OldXP = x.CurrentXP;
+                LastVisibleTime = Game.GameTime;
+                LasVisiblePostion = x.Position;
+                IsHaveTP = ((x.FindItem("item_tpscroll") != null) || (x.FindItem("item_travel_boots") != null) || (x.FindItem("item_travel_boots") != null));
+                UnitsProvideXPToThisHero.Clear();
+            }
+            public void UpdateIsDead()
+            {
+                // Check just  die
+                if (IsDead)
                 {
-                    return 0;
+                    if (Hero.LifeState == LifeState.Alive )
+                    {
+                        IsDead = false;
+                        //Console.WriteLine(Hero.Name + ": " + (Game.GameTime - RespawnTime));
+                    }
+                    if (Game.GameTime > RespawnTime)
+                    {
+                        IsDead = false;
+                        IsHaveTP = true;
+                    }
                 }
             }
             public bool IsAllNeutral()
@@ -129,17 +184,6 @@ namespace ScanNotVisibleEnemy
                     return false;
                 }
             }
-            public HeroExpand( Hero x)
-            {
-                Hero = x;
-                LastVisibleTime = Game.GameTime;
-                HeroHandle = x.Handle ;
-                Check = false;
-                OldXP = x.CurrentXP;
-                XPReviceinTick = 0;
-                UnitsProvideXPToThisHero = new List<Unit>();
-                UnitsProvideXPToThisHero.Clear();
-            }
             public uint Get_DifferentXP()
             {
                 return (Hero.CurrentXP - OldXP);
@@ -166,37 +210,12 @@ namespace ScanNotVisibleEnemy
                 {
                     return 0;
                 }
-            }
+            }            
+            #endregion
         }
         public class ListHeroExpand
         {
             public List<HeroExpand> List = new List<HeroExpand>();
-            public bool Get_Check(uint pHandle)
-            {
-                if (List != null)
-                {
-                    if (List.Count > 0)
-                    {
-                        foreach (HeroExpand v in List)
-                        {
-                            if (v.HeroHandle == pHandle)
-                            {
-                                //Console.WriteLine("Get_OldXP: " + pHandle.ToString() + "-" + v.OldXP.ToString());
-                                return v.Check;
-                            }
-                        }
-                        return false;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                }
-                else
-                {
-                    return false;
-                }
-            }
             public uint Get_OldXP(uint pHandle)
             {
                 if (List != null)
@@ -249,6 +268,60 @@ namespace ScanNotVisibleEnemy
                     return 0;
                 }
             }
+            public uint Get_CountDead()
+            {
+                if (List != null)
+                {
+                    if (List.Count > 0)
+                    {
+                        uint count = 0;
+                        foreach (HeroExpand v in List)
+                        {
+                            if ((v.Hero.Team == h_me.GetEnemyTeam()) && v.IsDead)
+                            {
+                                //Console.WriteLine("Get_OldXP: " + pHandle.ToString() + "-" + v.OldXP.ToString());
+                                count += 1;
+                            }
+                        }
+                        return count;
+                    }
+                    else
+                    {
+                        return 0;
+                    }
+                }
+                else
+                {
+                    return 0;
+                }
+            }
+            public uint Get_AliveAndVisible()
+            {
+                if (List != null)
+                {
+                    if (List.Count > 0)
+                    {
+                        uint count = 0;
+                        foreach (HeroExpand v in List)
+                        {
+                            if ((v.Hero.Team == h_me.GetEnemyTeam()) && (v.IsDead == false) && ((Game.GameTime - v.LastVisibleTime) <= TickTime))
+                            {
+                                //Console.WriteLine("Get_OldXP: " + pHandle.ToString() + "-" + v.OldXP.ToString());
+                                count += 1;
+                            }
+                        }
+                        return count;
+                    }
+                    else
+                    {
+                        return 0;
+                    }
+                }
+                else
+                {
+                    return 0;
+                }
+            }
             public uint Get_TotalReviceXPinTheory(uint pHandle)
             {
                 if (List != null)
@@ -285,8 +358,6 @@ namespace ScanNotVisibleEnemy
                         {
                             if (v.HeroHandle == pHandle)
                             {
-                                v.Check = true;
-                                //Console.WriteLine("Get_OldXP: " + pHandle.ToString() + "-" + v.OldXP.ToString());
                                 v.UnitsProvideXPToThisHero.Add(pUnit);
                                 return true;
                             }
@@ -354,9 +425,35 @@ namespace ScanNotVisibleEnemy
                 {
                     return 0;
                 }
+            }
+            public HeroExpand Get_HeroExpand(uint pHandle)
+            {
+                if (List != null)
+                {
+                    if (List.Count > 0)
+                    {
+                        foreach (HeroExpand v in List)
+                        {
+                            if (v.HeroHandle == pHandle)
+                            {
+                                //Console.WriteLine("Get_OldXP: " + pHandle.ToString() + "-" + v.OldXP.ToString());
+                                return v;
+                            }
+                        }
+                        return null;
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+                else
+                {
+                    return null;
+                }
 
             }
-            public bool IsReviceXPFromAllNeutral (uint pHandle)
+            public bool IsReviceXPFromAllNeutral(uint pHandle)
             {
                 if (List != null)
                 {
@@ -412,17 +509,89 @@ namespace ScanNotVisibleEnemy
                 }
 
             }
-            public void Update_HeroXP()
+            public bool CheckHandle(uint pHandle)
             {
-                List.Clear();
-                var AllHero = ObjectManager.GetEntities<Hero>().Where(x =>
-                    !x.IsIllusion).ToList();
-                foreach (Hero v in AllHero)
+                if (List != null)
                 {
-                    HeroExpand newExpandHero = new HeroExpand(v);
-                    newExpandHero.Hero = v;
-                    List.Add(newExpandHero);
+                    if (List.Count > 0)
+                    {
+                        foreach (HeroExpand v in List)
+                        {
+                            if (v.HeroHandle == pHandle)
+                            {
+                                //Console.WriteLine("Get_OldXP: " + pHandle.ToString() + "-" + v.OldXP.ToString());
+                                return true;
+                            }
+                        }
+                        return false;
+                    }
+                    else
+                    {
+                        return false;
+                    }
                 }
+                else
+                {
+                    return false;
+                }
+            }
+            public bool UpdateHero (Hero pHero)
+            {
+                if (List != null)
+                {
+                    if (List.Count > 0)
+                    {
+                        if (CheckHandle(pHero.Handle))
+                        {
+                            Get_HeroExpand(pHero.Handle).Update(pHero);
+                            return true;
+                        }
+                        else
+                        {
+                            HeroExpand newExpandHero = new HeroExpand(pHero);
+                            List.Add(newExpandHero);
+                            return true;
+                        }
+                    }
+                    else
+                    {
+                        HeroExpand newExpandHero = new HeroExpand(pHero);
+                        List.Add(newExpandHero);
+                        return true;
+                    }
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            public void Update_VisibleHeroes()
+            {
+                if (List == null)
+                {
+                    List = new List<HeroExpand>();
+                }
+
+                var AllVisibleHero = ObjectManager.GetEntities<Hero>().Where(x => !x.IsIllusion).ToList();
+                if (AllVisibleHero != null)
+                {
+                    if (AllVisibleHero.Count > 0)
+                    {
+                        foreach (Hero v in AllVisibleHero)
+                        {
+                            UpdateHero(v);
+                        }
+                    }
+                }
+
+                if (List.Count > 0)
+                {
+                    foreach (HeroExpand h in List)
+                    {
+                        h.UpdateIsDead();
+                    }
+                }
+
             }
         }
         public class UnitExpand
@@ -768,6 +937,8 @@ namespace ScanNotVisibleEnemy
 
         private static Hero h_me;
 
+        private static float OldTick;
+        private static float TickTime = 0.06f;
         #endregion
 
         #region FUNCTIONS
@@ -788,30 +959,129 @@ namespace ScanNotVisibleEnemy
                 }
             }
         }
-        private static uint GetNotVisibleEnemyHero()
+        private static float GetTimeToReach (int pMoveSpeed, Vector3 vStarPoint, Vector3 vEndPoint)
         {
-            uint MeepoClones = 0;
-
-            var enemyHeroesIsDead = (uint)ObjectManager.GetEntities<Hero>().Where(x =>
-                x.Team != h_me.Team &&
-                !x.IsAlive).Count<Hero>();
-            var enemyHeroesVisible = ObjectManager.GetEntities<Hero>().Where(x =>
-                x.Team != h_me.Team &&
-                !x.IsIllusion &&
-                x.IsAlive &&
-                x.IsVisible);
-
-            foreach (Hero v in enemyHeroesVisible)
+            double Distance = Vector3.Distance(vStarPoint, vEndPoint);
+            if (pMoveSpeed > 0)
             {
-                if ( v.ClassID == ClassID.CDOTA_Unit_Hero_Meepo)
+                return (float)Distance / (float)pMoveSpeed;
+            }
+            else
+            {
+                return (float)double.MaxValue;
+            }
+        }
+        private static float GetFastTimeToGoHere(Hero pHero, Vector3 pHere)
+        {
+            HeroExpand v = HeroesExpand.Get_HeroExpand(pHero.Handle);
+            int vHeroSpeed = pHero.MovementSpeed;
+
+            if (v.IsHaveTP)
+            {
+                Building ClosestBuilding = ObjectManager.GetEntities<Building>().Where( x=>
+                    x.IsAlive &&
+                    x.Team == pHero.Team).OrderBy(y => y.Distance2D(pHere)).FirstOrDefault();
+
+                return ((float)2.5*30 + GetTimeToReach(vHeroSpeed, ClosestBuilding.Position, pHere));
+            }
+            else
+            {
+                return GetTimeToReach(vHeroSpeed, v.LasVisiblePostion, pHere);
+            }
+        }
+        private static bool CanGetHere(HeroExpand pHero, Vector3 pHere)
+        {
+            Hero h = pHero.Hero;
+            if (h != null)
+            {
+                float Time = Game.GameTime - pHero.LastVisibleTime;
+                if (Time >= GetFastTimeToGoHere(h, pHere))
                 {
-                    if (v.AghanimState())
-                        MeepoClones += 1;
-                    var spellR = v.Spellbook.SpellR;
-                    MeepoClones += (uint)spellR.Level;
+                    return true;
+                }
+                else
+                {
+                    return false;
                 }
             }
-            return 5 + MeepoClones - enemyHeroesIsDead - (uint)enemyHeroesVisible.Count<Hero>();
+            else
+            {
+                return false;
+            }
+        }
+        private static uint GetNotVisibleDangerEnemyHero(Vector3 pPosition)
+        {
+            if (HeroesExpand.List != null)
+            {
+                if (HeroesExpand.List.Count > 0)
+                {
+                    uint vDead = HeroesExpand.Get_CountDead();
+                    uint vAliveVisible = HeroesExpand.Get_AliveAndVisible();
+
+                    uint vInVisibleAndDanger = 0;
+                    foreach (HeroExpand he in HeroesExpand.List )
+                    {
+                        if ((!he.IsDead) && (he.Hero.Team == h_me.GetEnemyTeam())  && ((Game.GameTime - he.LastVisibleTime) > TickTime))
+                        {
+                            if (CanGetHere(he, pPosition))
+                            {
+                                vInVisibleAndDanger += 1;
+                            }
+                        }
+                    }
+                    //Console.WriteLine("--------------------------------------------------------------");
+                    //Console.WriteLine("                                     Total = " + HeroesExpand.List.Where(x => x.Hero.Team == h_me.GetEnemyTeam()).ToList().Count);
+                    //Console.WriteLine("                                     Dead = " + vDead);
+                    //Console.WriteLine("                                     vAliveVisible = " + vAliveVisible);
+                    //Console.WriteLine("                                     vInVisibleAndDanger = " + vInVisibleAndDanger);
+                    //Console.WriteLine("--------------------------------------------------------------");
+                    return vInVisibleAndDanger;
+                }
+                else
+                {
+                    return 0;
+                }
+            }
+            else
+            {
+                return 0;
+            }
+        }
+        private static List<HeroExpand> ListDangerEnemyHero(Vector3 pPosition)
+        {
+            if (HeroesExpand.List != null)
+            {
+                if (HeroesExpand.List.Count > 0)
+                {
+                    return HeroesExpand.List.Where(x => !x.IsDead && x.Hero.Team == h_me.GetEnemyTeam() && ((Game.GameTime - x.LastVisibleTime) > TickTime) && CanGetHere(x, pPosition)).ToList();
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            else
+            {
+                return null;
+            }
+        }
+        private static List<HeroExpand> ListNotDangerEnemyHero(Vector3 pPosition)
+        {
+            if (HeroesExpand.List != null)
+            {
+                if (HeroesExpand.List.Count > 0)
+                {
+                    return HeroesExpand.List.Where(x => !x.IsDead && x.Hero.Team == h_me.GetEnemyTeam() && ((Game.GameTime - x.LastVisibleTime) > TickTime) && !CanGetHere(x, pPosition)).ToList();
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            else
+            {
+                return null;
+            }
         }
         private static List<Hero> GetShareXPHeroes (Unit u)
         {
@@ -948,7 +1218,6 @@ namespace ScanNotVisibleEnemy
         }
         private static void RelationAnalysys()
         {
-            uint NotVisibleEnemyHeroes = GetNotVisibleEnemyHero();
 
             AllHeros = ObjectManager.GetEntities<Hero>().Where(x =>
                 x.Level <= 25 &&
@@ -958,16 +1227,18 @@ namespace ScanNotVisibleEnemy
             #region Check if Hero revice XP from not visible source (ex. Jungle creep die in fog)
             foreach (Hero h in AllHeros)
             {
-                if (NotVisibleEnemyHeroes > 0)
-                {
                     if (HeroesExpand.Get_TotalReviceXPinTheory(h.Handle) > 0)
                     {
                         if (HeroesExpand.Get_DifferentXP(h.Handle) > HeroesExpand.Get_TotalReviceXPinTheory(h.Handle))
                         {
                             if ((HeroesExpand.Get_DifferentXP(h.Handle) - HeroesExpand.Get_TotalReviceXPinTheory(h.Handle)) > 5)
                             {
-                                HeroesExpand.Set_AlarmCount(h.Handle, 5 + NotVisibleEnemyHeroes);
-                                //Debug_2(2, h);
+                                uint NotVisibleEnemyHeroes = GetNotVisibleDangerEnemyHero(h.Position);
+                                if (NotVisibleEnemyHeroes > 0)
+                                {
+                                    HeroesExpand.Set_AlarmCount(h.Handle, 5 + NotVisibleEnemyHeroes);
+                                    //Debug_2(2, h);
+                                }
                             }
                             //else
                             //{
@@ -975,7 +1246,6 @@ namespace ScanNotVisibleEnemy
                             //}
                         }
                     }
-                }
             }
             #endregion
 
@@ -1005,6 +1275,7 @@ namespace ScanNotVisibleEnemy
                                                 // Only 1 unit 
                                                 if (Math.Abs(DifgerentXP - XPperHero) > 5)
                                                 {
+                                                    uint NotVisibleEnemyHeroes = GetNotVisibleDangerEnemyHero(u.Position);
                                                     if (NotVisibleEnemyHeroes > 0)
                                                     {
                                                         //float test = UnitsExpand.Get_BountyXP(u.Handle) / DifgerentXP;
@@ -1034,6 +1305,7 @@ namespace ScanNotVisibleEnemy
                                                 uint TotalXPReviceTheory = HeroesExpand.Get_TotalReviceXPinTheory(h.Handle);
                                                 if (Math.Abs(TotalXPReviceTheory - DifferentXP) > 5)
                                                 {
+                                                    uint NotVisibleEnemyHeroes = GetNotVisibleDangerEnemyHero(u.Position);
                                                     if (NotVisibleEnemyHeroes > 0)
                                                     {
                                                         UnitsExpand.Set_AlarmCount(u.Handle, 5 + NotVisibleEnemyHeroes);
@@ -1048,8 +1320,7 @@ namespace ScanNotVisibleEnemy
                                         }
                                     }
                                 }
-
-                        }
+                            }
                         }
                     }
                 }
@@ -1099,14 +1370,103 @@ namespace ScanNotVisibleEnemy
 
         //public static void Game_OnUpdate(EventArgs args)
         //{
+        //    //h_me = ObjectManager.LocalHero;
+        //    //if (h_me == null)
+        //    //    return;
+
+        //    //if (!Game.IsInGame || Game.GameTime < 30 || Game.IsPaused)
+        //    //    return;
+
+        //    //var enemyHeroesIsDead = ObjectManager.GetEntities<Hero>().Where(x =>
+        //    //x.Team != h_me.Team &&
+        //    //!x.IsAlive).ToList();
+        //    //uint vDeadCount = 0;
+        //    //if (enemyHeroesIsDead != null)
+        //    //{
+        //    //    vDeadCount = (uint)enemyHeroesIsDead.Count;
+        //    //    Console.WriteLine("IsDead = " + vDeadCount);
+        //    //    foreach (Hero v in enemyHeroesIsDead)
+        //    //    {
+        //    //        Console.WriteLine("         " + v.Name);
+        //    //    }
+        //    //}
+
+        //    //var enemyHeroesAlive = ObjectManager.GetEntities<Hero>().Where(x =>
+        //    //x.Team != h_me.Team &&
+        //    //x.IsAlive).ToList();
+        //    //uint vAliveCount = 0;
+        //    //if (enemyHeroesIsDead != null)
+        //    //{
+        //    //    vAliveCount = (uint)enemyHeroesAlive.Count;
+        //    //    Console.WriteLine("AliveCount = " + vAliveCount);
+        //    //    foreach (Hero v in enemyHeroesAlive)
+        //    //    {
+        //    //        Console.WriteLine("         " + v.Name);
+        //    //    }
+        //    //}
+        //    //List<HeroExpand> v = ListDangerEnemyHero(Game.MousePosition);
+        //    //if (v!=null)
+        //    //{
+        //    //    if (v.Count >0)
+        //    //    {
+        //    //        Console.WriteLine((Game.GameTime) + " -------------------------------------------------- ");
+        //    //        Console.WriteLine((Game.GameTime) + " Danger = " + v.Count);
+        //    //        foreach (HeroExpand h in v)
+        //    //        {
+        //    //            Console.WriteLine("          " + h.Hero.Name + ": InFog = " + (Game.GameTime - h.LastVisibleTime) + " FastestTime = " + GetFastTimeToGoHere(h.Hero, Game.MousePosition) + " IsHaveTp = " + h.IsHaveTP);
+        //    //        }
+        //    //    }
+        //    //}
+        //    //List<HeroExpand> f = ListNotDangerEnemyHero(Game.MousePosition);
+        //    //if (f != null)
+        //    //{
+        //    //    if (f.Count > 0)
+        //    //    {
+        //    //        Console.WriteLine((Game.GameTime) + " NOT Danger = " + f.Count);
+        //    //        foreach (HeroExpand h in f)
+        //    //        {
+        //    //            Console.WriteLine("          " + h.Hero.Name + ": InFog = " + (Game.GameTime - h.LastVisibleTime) + " FastestTime = " + GetFastTimeToGoHere(h.Hero, Game.MousePosition) + " IsHaveTp = " + h.IsHaveTP);
+        //    //        }
+        //    //    }
+        //    //}
+
+        //    //if (HeroesExpand.List != null)
+        //    //{
+        //    //    Console.WriteLine((Game.GameTime) + " Total = " + HeroesExpand.List.Where(x => x.Hero.Team == h_me.GetEnemyTeam()).ToList().Count);
+        //    //    Console.WriteLine("     Dead: " + HeroesExpand.Get_CountDead());
+        //    //    foreach (HeroExpand he in HeroesExpand.List)
+        //    //    {
+        //    //        if ((he.Hero.Team == h_me.GetEnemyTeam()) && he.IsDead)
+        //    //        {
+        //    //            Console.WriteLine("          " + he.Hero.Name + ": InFog = " + (Game.GameTime - he.LastVisibleTime) + " Respawn in = " + (he.RespawnTime - Game.GameTime) + " IsHaveTp = " + he.IsHaveTP);
+        //    //        }
+        //    //    }
+        //    //    Console.WriteLine("     Alive and Visible: " + HeroesExpand.Get_AliveAndVisible());
+        //    //    foreach (HeroExpand he in HeroesExpand.List)
+        //    //    {
+        //    //        if ((he.Hero.Team == h_me.GetEnemyTeam()) && !he.IsDead && ((Game.GameTime - he.LastVisibleTime) <= TickTime))
+        //    //        {
+        //    //            Console.WriteLine("          " + he.Hero.Name + " IsHaveTp = " + he.IsHaveTP);
+        //    //        }
+        //    //    }
+        //    //    Console.WriteLine("    InVisible: " + (HeroesExpand.List.Where(x => x.Hero.Team == h_me.GetEnemyTeam()).ToList().Count - HeroesExpand.Get_CountDead() - HeroesExpand.Get_AliveAndVisible()));
+        //    //    foreach (HeroExpand he in HeroesExpand.List)
+        //    //    {
+        //    //        if ((he.Hero.Team == h_me.GetEnemyTeam()) && !he.IsDead && ((Game.GameTime - he.LastVisibleTime) > TickTime))
+        //    //        {
+        //    //            Console.WriteLine("          " + he.Hero.Name + ": InFog = " + (Game.GameTime - he.LastVisibleTime) + " IsHaveTp = " + he.IsHaveTP);
+        //    //        }
+        //    //    }
+        //    //}
+        //    //OldTick = Game.GameTime;
         //}
-        public static void Game_OnInGameUpdate (EventArgs args)
+        public static void Game_OnInGameUpdate(EventArgs args)
         {
             h_me = ObjectManager.LocalHero;
             if (h_me == null)
                 return;
 
-            if (!Game.IsInGame && Game.GameTime < 30 && Game.IsPaused )
+            if (!Game.IsInGame || Game.GameTime < 30 || Game.IsPaused)
                 return;
 
             bool active = Menu.Item("k_Scan").GetValue<KeyBind>().Active;
@@ -1160,7 +1520,7 @@ namespace ScanNotVisibleEnemy
                 }
                 AlarmClear();
                 RelationAnalysys();
-                HeroesExpand.Update_HeroXP();
+                HeroesExpand.Update_VisibleHeroes();
                 UnitsExpand.Update_UnitLifeState();
             }
         }
@@ -1173,7 +1533,6 @@ namespace ScanNotVisibleEnemy
 
             foreach (AlarmWarning v in ListAlarm )
             {
-
                 if (v.AlarmCount <= 5)
                 {
                     Drawing.DrawText("[" + v.AlarmCount.ToString() + "]", Drawing.WorldToScreen(v.Position), new Vector2(TextSize * 10, TextSize * 10), Color.Red, FontFlags.Underline);
