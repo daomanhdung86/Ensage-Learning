@@ -116,8 +116,11 @@ namespace ScanNotVisibleEnemy
                 IsDead = true;
                 DeadTime = 0;
                 RespawnTime = 0;
-                LastVisibleTime = Game.GameTime;
-                LasVisiblePostion = x.Position;
+                if (x.IsVisible )
+                {
+                    LastVisibleTime = Game.GameTime;
+                    LasVisiblePostion = x.Position;
+                }
                 IsHaveTP = ((x.FindItem("item_tpscroll") != null) || (x.FindItem("item_travel_boots") != null) || (x.FindItem("item_travel_boots") != null));
                 UnitsProvideXPToThisHero = new List<Unit>();
                 UnitsProvideXPToThisHero.Clear();
@@ -135,8 +138,11 @@ namespace ScanNotVisibleEnemy
                 }
                 Hero = x;
                 OldXP = x.CurrentXP;
-                LastVisibleTime = Game.GameTime;
-                LasVisiblePostion = x.Position;
+                if (x.IsVisible)
+                {
+                    LastVisibleTime = Game.GameTime;
+                    LasVisiblePostion = x.Position;
+                }
                 IsHaveTP = ((x.FindItem("item_tpscroll") != null) || (x.FindItem("item_travel_boots") != null) || (x.FindItem("item_travel_boots") != null));
                 UnitsProvideXPToThisHero.Clear();
             }
