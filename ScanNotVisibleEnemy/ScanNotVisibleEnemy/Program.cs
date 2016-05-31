@@ -976,17 +976,20 @@ namespace ScanNotVisibleEnemy
         {
             HeroExpand v = HeroesExpand.Get_HeroExpand(pHero.Handle);
             int vHeroSpeed = pHero.MovementSpeed;
-
-            if (v.IsHaveTP)
-            {
-                Building ClosestBuilding = ObjectManager.GetEntities<Building>().Where( x=>
+            Building ClosestBuilding = ObjectManager.GetEntities<Building>().Where( x=>
                     x.IsAlive &&
                     x.Team == pHero.Team).OrderBy(y => y.Distance2D(pHere)).FirstOrDefault();
-                return ((float)2.5*30 + GetTimeToReach(vHeroSpeed, ClosestBuilding.Position, pHere));
+
+            float tpTime = 2.5f + GetTimeToReach(vHeroSpeed, ClosestBuilding.Position, pHere);
+            float MoveTime =  GetTimeToReach(vHeroSpeed, v.LasVisiblePostion, pHere);
+
+            if (tpTime > MoveTime )
+            {
+                return MoveTime;
             }
             else
             {
-                return GetTimeToReach(vHeroSpeed, v.LasVisiblePostion, pHere);
+                return tpTime;
             }
         }
         private static bool CanGetHere(HeroExpand pHero, Vector3 pHere)
