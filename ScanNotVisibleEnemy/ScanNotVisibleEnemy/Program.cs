@@ -8,12 +8,87 @@ using Ensage.Common.Menu;
 using SharpDX;
 using SharpDX.Direct3D9;
 
-
 namespace ScanNotVisibleEnemy
 {
     class Program
     {
         #region CLASS
+        public class BountyXP
+        {
+            public string Name
+            {
+                get;
+                set;
+            }
+            public uint fBountyXP
+            {
+                get;
+                set;
+            }
+            public BountyXP(string pName, uint pBountyXP)
+            {
+                Name = pName;
+                fBountyXP = pBountyXP;
+            }
+        }
+        public class ListBountyXP
+        {
+            public List<BountyXP> List
+            {
+                get;
+                set;
+            }
+            public ListBountyXP()
+            {
+                List = new List<BountyXP>();
+            }
+            public uint Get_BoubtyXP(string pName)
+            {
+                if (List != null)
+                {
+                    if (List.Count > 0)
+                    {
+                        foreach (BountyXP xp in List)
+                        {
+                            if (xp.Name == pName)
+                            {
+                                return xp.fBountyXP;
+                            }
+                        }
+                        uint BountyXP = 0;
+                        try
+                        {
+                            BountyXP = (uint)Game.FindKeyValues(pName + "/BountyXP", KeyValueSource.Unit).IntValue;
+                        }
+                        catch (Exception e)
+                        {
+                        }
+                        BountyXP newBountyXP = new BountyXP(pName, BountyXP);
+                        List.Add(newBountyXP);
+                        return BountyXP;
+                    }
+                    else
+                    {
+                        uint BountyXP = 0;
+                        try
+                        {
+                            BountyXP = (uint)Game.FindKeyValues(pName + "/BountyXP", KeyValueSource.Unit).IntValue;
+                        }
+                        catch (Exception e)
+                        {
+                        }
+                        BountyXP newBountyXP = new BountyXP(pName, BountyXP);
+                        List.Add(newBountyXP );
+                        return BountyXP;
+                    }
+                }
+                else
+                {
+                    List = new List<BountyXP>();
+                    return 0;
+                }
+            }
+        }
         public class AlarmWarning
         {
             public Vector3 Position
@@ -36,15 +111,55 @@ namespace ScanNotVisibleEnemy
                 get;
                 set;
             }
-            public AlarmWarning (Vector3 pPosition, uint pAlarmCount)
+            public AlarmWarning (uint pMode, Vector3 pPosition, uint pAlarmCount)
             {
                 //Console.WriteLine("                               " + pPosition.ToString() + " = " + pAlarmCount.ToString());
+
                 Position = pPosition;
                 AlarmCount = pAlarmCount;
                 ParticleEffect = new ParticleEffect("particles/ui_mouseactions/drag_selected_ring.vpcf", pPosition);
-                ParticleEffect.SetControlPoint(1, new Vector3(Menu.Item("AlarmColorR").GetValue<Slider>().Value, Menu.Item("AlarmColorG").GetValue<Slider>().Value, Menu.Item("AlarmColorB").GetValue<Slider>().Value));
+                if (pMode == 0)
+                {
+                    ParticleEffect.SetControlPoint(1, new Vector3(Menu.Item("H_AlarmColorR").GetValue<Slider>().Value, Menu.Item("H_AlarmColorG").GetValue<Slider>().Value, Menu.Item("H_AlarmColorB").GetValue<Slider>().Value));
+                }
+                else
+                {
+                    ParticleEffect.SetControlPoint(1, new Vector3(Menu.Item("C_AlarmColorR").GetValue<Slider>().Value, Menu.Item("C_AlarmColorG").GetValue<Slider>().Value, Menu.Item("C_AlarmColorB").GetValue<Slider>().Value));
+                }
                 ParticleEffect.SetControlPoint(2, new Vector3(1300 * -1, 255, 0));
                 CreateTime = Game.GameTime;
+            }
+        }
+        public class ListAlarmWarning
+        {
+            public List<AlarmWarning> List
+            {
+                get;
+                set;
+            }
+            public ListAlarmWarning()
+            {
+                List = new List<AlarmWarning>();
+            }
+            public void Add_Alarm(uint pMode, Vector3 pPosition, uint pAlarmCount)
+            {
+                int count = List.Count;
+                for (int i = count - 1; i >= 0; i++ )
+                {
+                    if (List[i].Position.Distance2D(pPosition) <= Menu.Item("AlarmMinDistance").GetValue<Slider>().Value)
+                    {
+                        if (List[i].AlarmCount >= pAlarmCount)
+                        {
+                            return;
+                        }
+                        else
+                        {
+                            List.RemoveAt(i);
+                        }
+                    }
+                }
+                AlarmWarning newAlarm = new AlarmWarning(pMode, pPosition, pAlarmCount);
+                List.Add(newAlarm);
             }
         }
         public class HeroExpand
@@ -56,6 +171,11 @@ namespace ScanNotVisibleEnemy
                 set;
             }
             public Hero Hero
+            {
+                get;
+                set;
+            }
+            public int OldDenyCount
             {
                 get;
                 set;
@@ -113,6 +233,7 @@ namespace ScanNotVisibleEnemy
                 Hero = x;
                 OldLifeState = x.LifeState;
                 OldXP = x.CurrentXP;
+                OldDenyCount = x.Player.DenyCount;
                 IsDead = true;
                 DeadTime = 0;
                 RespawnTime = 0;
@@ -135,6 +256,7 @@ namespace ScanNotVisibleEnemy
                 }
                 Hero = x;
                 OldXP = x.CurrentXP;
+                OldDenyCount = x.Player.DenyCount;
                 LastVisibleTime = Game.GameTime;
                 LasVisiblePostion = x.Position;
                 IsHaveTP = ((x.FindItem("item_tpscroll") != null) || (x.FindItem("item_travel_boots") != null) || (x.FindItem("item_travel_boots") != null));
@@ -186,7 +308,14 @@ namespace ScanNotVisibleEnemy
             }
             public uint Get_DifferentXP()
             {
-                return (Hero.CurrentXP - OldXP);
+                if (Hero.Level < 25)
+                {
+                    return (Hero.CurrentXP - OldXP);
+                }
+                else
+                {
+                    return GetTotalReviceXPinTheory();
+                }
             }
             public uint GetTotalReviceXPinTheory()
             {
@@ -228,6 +357,32 @@ namespace ScanNotVisibleEnemy
                             {
                                 //Console.WriteLine("Get_OldXP: " + pHandle.ToString() + "-" + v.OldXP.ToString());
                                 return v.OldXP;
+                            }
+                        }
+                        return 0;
+                    }
+                    else
+                    {
+                        return 0;
+                    }
+                }
+                else
+                {
+                    return 0;
+                }
+            }
+            public int Get_OldDenyCount(uint pHandle)
+            {
+                if (List != null)
+                {
+                    if (List.Count > 0)
+                    {
+                        foreach (HeroExpand v in List)
+                        {
+                            if (v.HeroHandle == pHandle)
+                            {
+                                //Console.WriteLine("Get_OldXP: " + pHandle.ToString() + "-" + v.OldXP.ToString());
+                                return v.OldDenyCount;
                             }
                         }
                         return 0;
@@ -491,8 +646,7 @@ namespace ScanNotVisibleEnemy
                             if (v.HeroHandle == pHandle)
                             {
                                 //Console.WriteLine("Get_OldXP: " + pHandle.ToString() + "-" + v.OldXP.ToString());
-                                AlarmWarning newAlarm = new AlarmWarning(v.Hero.Position, pAlarmCount);
-                                ListAlarm.Add(newAlarm);
+                                ListAlarm.Add_Alarm(0, v.Hero.Position, pAlarmCount);
                                 return true;
                             }
                         }
@@ -893,8 +1047,7 @@ namespace ScanNotVisibleEnemy
                             if (v.UnitHandle == pHandle)
                             {
                                 //Console.WriteLine("Get_OldXP: " + pHandle.ToString() + "-" + v.OldXP.ToString());
-                                AlarmWarning newAlarm = new AlarmWarning(v.Unit.Position, pAlarmCount);
-                                ListAlarm.Add(newAlarm);
+                                ListAlarm.Add_Alarm(1, v.Unit.Position, pAlarmCount);
                                 return true;
                             }
                         }
@@ -925,11 +1078,11 @@ namespace ScanNotVisibleEnemy
             }
         }
         #endregion
-
         #region FILEDS
         private static readonly Menu Menu = new Menu("Scan not visible enemy", "ScanNotInVisibleEnemy", true);
 
-        private static List<AlarmWarning > ListAlarm = new List<AlarmWarning>();
+        private static ListBountyXP ListXP = new ListBountyXP();
+        private static ListAlarmWarning ListAlarm = new ListAlarmWarning();
         private static ListHeroExpand HeroesExpand = new ListHeroExpand();
         private static ListUnitExpand UnitsExpand = new ListUnitExpand();
 
@@ -941,20 +1094,19 @@ namespace ScanNotVisibleEnemy
         private static float OldTick;
         private static float TickTime = 0.06f;
         #endregion
-
         #region FUNCTIONS
         private static void AlarmClear()
         {
-            if (ListAlarm != null)
+            if (ListAlarm.List != null)
             {
-                if (ListAlarm.Count > 0)
+                if (ListAlarm.List.Count > 0)
                 {
-                    for (int i= ListAlarm.Count -1 ; i >=0; i=i-1)
+                    for (int i= ListAlarm.List.Count - 1; i >= 0; i = i - 1)
                     {
-                        if (Game.GameTime - ListAlarm[i].CreateTime > Menu.Item("AlarmShowTime").GetValue<Slider>().Value)
+                        if (Game.GameTime - ListAlarm.List[i].CreateTime > Menu.Item("AlarmShowTime").GetValue<Slider>().Value)
                         {
-                            ListAlarm[i].ParticleEffect.Dispose();
-                            ListAlarm.RemoveAt(i);
+                            ListAlarm.List[i].ParticleEffect.Dispose();
+                            ListAlarm.List.RemoveAt(i);
                         }
                     }
                 }
@@ -1020,10 +1172,10 @@ namespace ScanNotVisibleEnemy
                 {
                     uint vDead = HeroesExpand.Get_CountDead();
                     uint vAliveVisible = HeroesExpand.Get_AliveAndVisible();
-                    Console.WriteLine("                                     Total = " + HeroesExpand.List.Where(x => x.Hero.Team == h_me.GetEnemyTeam()).ToList().Count);
-                    Console.WriteLine("                                     Dead = " + vDead);
-                    Console.WriteLine("                                     vAliveVisible = " + vAliveVisible);
-                    Console.WriteLine("                                     Danger = ");
+                    //Console.WriteLine("                                     Total = " + HeroesExpand.List.Where(x => x.Hero.Team == h_me.GetEnemyTeam()).ToList().Count);
+                    //Console.WriteLine("                                     Dead = " + vDead);
+                    //Console.WriteLine("                                     vAliveVisible = " + vAliveVisible);
+                    //Console.WriteLine("                                     Danger = ");
                     uint vInVisibleAndDanger = 0;
                     foreach (HeroExpand he in HeroesExpand.List )
                     {
@@ -1032,23 +1184,23 @@ namespace ScanNotVisibleEnemy
                             if (CanGetHere(he, pPosition))
                             {
                                 vInVisibleAndDanger += 1;
-                                Console.WriteLine("                                              " + he.Hero.Name + " In fog = " + (Game.GameTime - he.LastVisibleTime) + " MinTime = " + GetFastTimeToGoHere(he.Hero, pPosition));
+                                //Console.WriteLine("                                              " + he.Hero.Name + " In fog = " + (Game.GameTime - he.LastVisibleTime) + " MinTime = " + GetFastTimeToGoHere(he.Hero, pPosition));
                             }
                         }
                     }
-                    Console.WriteLine("                                     NotDanger = ");
+                    //Console.WriteLine("                                     NotDanger = ");
                     foreach (HeroExpand he in HeroesExpand.List)
                     {
                         if ((!he.IsDead) && (he.Hero.Team == h_me.GetEnemyTeam()) && ((Game.GameTime - he.LastVisibleTime) > TickTime))
                         {
                             if (!CanGetHere(he, pPosition))
                             {
-                                Console.WriteLine("                                              " + he.Hero.Name + " In fog = " + (Game.GameTime - he.LastVisibleTime) + " MinTime = " + GetFastTimeToGoHere(he.Hero, pPosition));
+                                //Console.WriteLine("                                              " + he.Hero.Name + " In fog = " + (Game.GameTime - he.LastVisibleTime) + " MinTime = " + GetFastTimeToGoHere(he.Hero, pPosition));
                             }
                         }
                     }
 
-                    Console.WriteLine("--------------------------------------------------------------");
+                    //Console.WriteLine("--------------------------------------------------------------");
                     return vInVisibleAndDanger;
                 }
                 else
@@ -1268,7 +1420,6 @@ namespace ScanNotVisibleEnemy
         }
         private static void RelationAnalysys()
         {
-
             AllHeros = ObjectManager.GetEntities<Hero>().Where(x =>
                 x.Level <= 25 &&
                 x.IsAlive &&
@@ -1277,26 +1428,25 @@ namespace ScanNotVisibleEnemy
             #region Check if Hero revice XP from not visible source (ex. Jungle creep die in fog)
             foreach (Hero h in AllHeros)
             {
-                    if (HeroesExpand.Get_TotalReviceXPinTheory(h.Handle) > 0)
+                uint Get_TotalReviceXPinTheory = HeroesExpand.Get_TotalReviceXPinTheory(h.Handle);
+                uint Get_DifferentXP = HeroesExpand.Get_TotalReviceXPinTheory(h.Handle);
+                if (Get_TotalReviceXPinTheory > 0)
                     {
-                        if (HeroesExpand.Get_DifferentXP(h.Handle) > HeroesExpand.Get_TotalReviceXPinTheory(h.Handle))
+                        if ((Get_DifferentXP - HeroesExpand.Get_TotalReviceXPinTheory(h.Handle)) > 5)
                         {
-                            if ((HeroesExpand.Get_DifferentXP(h.Handle) - HeroesExpand.Get_TotalReviceXPinTheory(h.Handle)) > 5)
+                            //Console.WriteLine("--------------------------------------------------------------");
+                            //Console.WriteLine("Check for " + h.Name);
+                            uint NotVisibleEnemyHeroes = GetNotVisibleDangerEnemyHero(h.Position);
+                            if (NotVisibleEnemyHeroes > 0)
                             {
-                                Console.WriteLine("--------------------------------------------------------------");
-                                Console.WriteLine("Check for " + h.Name);
-                                uint NotVisibleEnemyHeroes = GetNotVisibleDangerEnemyHero(h.Position);
-                                if (NotVisibleEnemyHeroes > 0)
-                                {
-                                    HeroesExpand.Set_AlarmCount(h.Handle, 5 + NotVisibleEnemyHeroes);
-                                    //Debug_2(2, h);
-                                }
+                                HeroesExpand.Set_AlarmCount(h.Handle, 5 + NotVisibleEnemyHeroes);
+                                //Debug_2(2, h);
                             }
-                            //else
-                            //{
-                            //    Debug_2(1, h);
-                            //}
                         }
+                        //else
+                        //{
+                        //    Debug_2(1, h);
+                        //}
                     }
             }
             #endregion
@@ -1322,22 +1472,23 @@ namespace ScanNotVisibleEnemy
                                         {
                                             if (countUnit == 1)
                                             {
-                                                uint DifgerentXP = HeroesExpand.Get_DifferentXP(h.Handle);
+                                                uint DifferentXP = HeroesExpand.Get_DifferentXP(h.Handle);
                                                 uint XPperHero = UnitsExpand.Get_XPperHero(u.Handle);
                                                 // Only 1 unit 
-                                                if (Math.Abs(DifgerentXP - XPperHero) > 5)
+                                                if (Math.Abs(DifferentXP - XPperHero) > 5)
                                                 {
-                                                    Console.WriteLine("--------------------------------------------------------------");
-                                                    Console.WriteLine("Check for " + u.Name);
+                                                    //Console.WriteLine("--------------------------------------------------------------");
+                                                    //Console.WriteLine("Check for " + u.Name);
                                                     uint NotVisibleEnemyHeroes = GetNotVisibleDangerEnemyHero(u.Position);
                                                     if (NotVisibleEnemyHeroes > 0)
                                                     {
                                                         //float test = UnitsExpand.Get_BountyXP(u.Handle) / DifgerentXP;
                                                         //Console.WriteLine("vTheoryGetXPHero = " + UnitsExpand.Get_BountyXP(u.Handle).ToString() + " / " + DifgerentXP.ToString() + " = " + test.ToString());
-                                                        uint vTheoryGetXPHero = UnitsExpand.Get_BountyXP(u.Handle) / DifgerentXP;
-                                                        if (NotVisibleEnemyHeroes >= vTheoryGetXPHero - (uint)UnitsExpand.Get_CountHerosShareXPFromThisUnit(u.Handle))
+                                                        uint vTheoryGetXPHero = UnitsExpand.Get_BountyXP(u.Handle) / DifferentXP;
+                                                        uint Get_CountHerosShareXPFromThisUnit = (uint)UnitsExpand.Get_CountHerosShareXPFromThisUnit(u.Handle);
+                                                        if (NotVisibleEnemyHeroes >= vTheoryGetXPHero - Get_CountHerosShareXPFromThisUnit)
                                                         {
-                                                            UnitsExpand.Set_AlarmCount(u.Handle, vTheoryGetXPHero - (uint)UnitsExpand.Get_CountHerosShareXPFromThisUnit(u.Handle));
+                                                            UnitsExpand.Set_AlarmCount(u.Handle, vTheoryGetXPHero - Get_CountHerosShareXPFromThisUnit);
                                                             //Debug_1(2, u);
                                                         }
                                                         else
@@ -1359,8 +1510,8 @@ namespace ScanNotVisibleEnemy
                                                 uint TotalXPReviceTheory = HeroesExpand.Get_TotalReviceXPinTheory(h.Handle);
                                                 if (Math.Abs(TotalXPReviceTheory - DifferentXP) > 5)
                                                 {
-                                                    Console.WriteLine("--------------------------------------------------------------");
-                                                    Console.WriteLine("Check for " + u.Name);
+                                                    //Console.WriteLine("--------------------------------------------------------------");
+                                                    //Console.WriteLine("Check for " + u.Name);
                                                     uint NotVisibleEnemyHeroes = GetNotVisibleDangerEnemyHero(u.Position);
                                                     if (NotVisibleEnemyHeroes > 0)
                                                     {
@@ -1402,10 +1553,21 @@ namespace ScanNotVisibleEnemy
             var OptionSetting = new Menu("Options", "Options");
             OptionSetting.AddItem(new MenuItem("XP_Range", "Range revice XP").SetValue(new Slider(1300, 500, 2000)).SetTooltip(""));
             OptionSetting.AddItem(new MenuItem("AlarmShowTime", "Alarm show time").SetValue(new Slider(3, 0, 10)).SetTooltip("Time to show alarm."));
-            OptionSetting.AddItem(new MenuItem("AlarmColorR", "Alarm color R").SetValue(new Slider(204, 0, 255)).SetTooltip("Color of alarm ring."));
-            OptionSetting.AddItem(new MenuItem("AlarmColorG", "Alarm color G").SetValue(new Slider(0, 0, 255)).SetTooltip("Color of alarm ring."));
-            OptionSetting.AddItem(new MenuItem("AlarmColorB", "Alarm color B").SetValue(new Slider(0, 0, 255)).SetTooltip("Color of alarm ring."));
+            OptionSetting.AddItem(new MenuItem("AlarmMinDistance", "Alarm min distance").SetValue(new Slider(300, 0, 1000)).SetTooltip("Min distance between 2 alarm point."));
+            OptionSetting.AddItem(new MenuItem("DelayTime", "Delay time").SetValue(new Slider(0, 0, 1000)).SetTooltip("Set delay time to more FPS."));
+            var HeroColorSetting = new Menu("Hero color", "HeroColor");
+            HeroColorSetting.AddItem(new MenuItem("H_AlarmColorR", "Alarm color R").SetValue(new Slider(20, 0, 255)).SetTooltip("Color of alarm ring."));
+            HeroColorSetting.AddItem(new MenuItem("H_AlarmColorG", "Alarm color G").SetValue(new Slider(5, 0, 255)).SetTooltip("Color of alarm ring."));
+            HeroColorSetting.AddItem(new MenuItem("H_AlarmColorB", "Alarm color B").SetValue(new Slider(161, 0, 255)).SetTooltip("Color of alarm ring."));
+            OptionSetting.AddSubMenu(HeroColorSetting);
+
+            var CreepColorSetting = new Menu("Creep color", "CreepColor");
+            CreepColorSetting.AddItem(new MenuItem("C_AlarmColorR", "Alarm color R").SetValue(new Slider(204, 0, 255)).SetTooltip("Color of alarm ring."));
+            CreepColorSetting.AddItem(new MenuItem("C_AlarmColorG", "Alarm color G").SetValue(new Slider(0, 0, 255)).SetTooltip("Color of alarm ring."));
+            CreepColorSetting.AddItem(new MenuItem("C_AlarmColorB", "Alarm color B").SetValue(new Slider(0, 0, 255)).SetTooltip("Color of alarm ring."));
+            OptionSetting.AddSubMenu(CreepColorSetting);
             OptionSetting.AddItem(new MenuItem("AlarmTextSize", "Alarm text size").SetValue(new Slider(5, 0, 10)).SetTooltip("Text size alarm."));
+
             Menu.AddSubMenu(OptionSetting);
 
             Menu.AddToMainMenu();
@@ -1423,7 +1585,6 @@ namespace ScanNotVisibleEnemy
             Game.OnIngameUpdate += Game_OnInGameUpdate;
             Drawing.OnDraw += Game_OnDraw;
         }
-
         //public static void Game_OnUpdate(EventArgs args)
         //{
         //    h_me = ObjectManager.LocalHero;
@@ -1525,9 +1686,7 @@ namespace ScanNotVisibleEnemy
 
             if (active)
             {
-                AllUnits = ObjectManager.GetEntities<Unit>().Where(x =>
-                    x.UnitType != 1 &&
-                    !x.IsIllusion).ToList();
+                AllUnits = ObjectManager.GetEntities<Unit>().Where(x => x.UnitType != 1 && !x.IsIllusion).ToList();
                 if (AllUnits != null)
                 {
                     if (AllUnits.Count > 0)
@@ -1538,19 +1697,7 @@ namespace ScanNotVisibleEnemy
                             {
                                 if (UnitsExpand.Get_OldLifeState(v.Handle) == LifeState.Alive)
                                 {
-                                    try
-                                    {
-                                        uint BountyXP = (uint)Game.FindKeyValues(v.Name + "/BountyXP", KeyValueSource.Unit).IntValue;
-                                        UnitsExpand.Set_BountyXP(v.Handle, BountyXP);
-                                        //Console.WriteLine(v.Name + "die create " + BountyXP.ToString() + " XP affect to:");
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        UnitsExpand.Set_BountyXP(v.Handle, 0);
-                                        //Console.WriteLine("KeysError: " + v.Name + "/BountyXP _ " + e.Message);
-                                        //Console.WriteLine(v.Name + "die create 0 XP affect to:");
-                                    }
-
+                                    UnitsExpand.Set_BountyXP(v.Handle, ListXP.Get_BoubtyXP(v.Name));
                                     var EnemyHeroesShareEXP =  GetShareXPHeroes(v);
                                     if (EnemyHeroesShareEXP != null)
                                     {
@@ -1571,7 +1718,14 @@ namespace ScanNotVisibleEnemy
                     }
                 }
                 AlarmClear();
-                RelationAnalysys();
+
+                int sleepTime =  Menu.Item("DelayTime").GetValue<Slider>().Value;
+                if (Utils.SleepCheck("Delay time ..."))
+                {
+                    RelationAnalysys();
+                    Utils.Sleep(sleepTime, "Delay time ...");
+                }
+
                 HeroesExpand.Update_VisibleHeroes();
                 UnitsExpand.Update_UnitLifeState();
             }
@@ -1583,7 +1737,7 @@ namespace ScanNotVisibleEnemy
                 return;
             int TextSize = Menu.Item("AlarmTextSize").GetValue<Slider>().Value;
 
-            foreach (AlarmWarning v in ListAlarm )
+            foreach (AlarmWarning v in ListAlarm.List)
             {
                 if (v.AlarmCount <= 5)
                 {
@@ -1594,7 +1748,6 @@ namespace ScanNotVisibleEnemy
                 {
                     Drawing.DrawText((v.AlarmCount - 5).ToString(), Drawing.WorldToScreen(v.Position), new Vector2(TextSize * 10, TextSize * 10), Color.Red, FontFlags.None);
                     Drawing.DrawText((v.AlarmCount - 5).ToString(), WorldToMiniMap(v.Position, TextSize), new Vector2(TextSize * 10, TextSize * 10), Color.Red, FontFlags.None);
-
                 }
             }
 
