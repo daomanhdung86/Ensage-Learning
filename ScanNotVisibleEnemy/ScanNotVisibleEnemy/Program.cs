@@ -1420,17 +1420,20 @@ namespace ScanNotVisibleEnemy
         }
         private static void RelationAnalysys()
         {
-            AllHeros = ObjectManager.GetEntities<Hero>().Where(x =>
-                x.Level <= 25 &&
-                x.IsAlive &&
-                !x.IsIllusion).ToList();
-            
-            #region Check if Hero revice XP from not visible source (ex. Jungle creep die in fog)
-            foreach (Hero h in AllHeros)
+            if (Utils.SleepCheck("Delay time ..."))
             {
-                uint Get_TotalReviceXPinTheory = HeroesExpand.Get_TotalReviceXPinTheory(h.Handle);
-                uint Get_DifferentXP = HeroesExpand.Get_TotalReviceXPinTheory(h.Handle);
-                if (Get_TotalReviceXPinTheory > 0)
+
+                AllHeros = ObjectManager.GetEntities<Hero>().Where(x =>
+                    x.Level <= 25 &&
+                    x.IsAlive &&
+                    !x.IsIllusion).ToList();
+
+                #region Check if Hero revice XP from not visible source (ex. Jungle creep die in fog)
+                foreach (Hero h in AllHeros)
+                {
+                    uint Get_TotalReviceXPinTheory = HeroesExpand.Get_TotalReviceXPinTheory(h.Handle);
+                    uint Get_DifferentXP = HeroesExpand.Get_TotalReviceXPinTheory(h.Handle);
+                    if (Get_TotalReviceXPinTheory > 0)
                     {
                         if ((Get_DifferentXP - HeroesExpand.Get_TotalReviceXPinTheory(h.Handle)) > 5)
                         {
@@ -1448,81 +1451,82 @@ namespace ScanNotVisibleEnemy
                         //    Debug_2(1, h);
                         //}
                     }
-            }
-            #endregion
+                }
+                #endregion
 
-            #region Analysys Unit
-            if (AllUnits != null)
-            {
-                if (AllUnits.Count > 0)
+                #region Analysys Unit
+                if (AllUnits != null)
                 {
-                    foreach (Unit u in AllUnits)
+                    if (AllUnits.Count > 0)
                     {
-                        if (u.Team != h_me.GetEnemyTeam())
+                        foreach (Unit u in AllUnits)
                         {
-                            if (UnitsExpand.Get_Check(u.Handle))
+                            if (u.Team != h_me.GetEnemyTeam())
                             {
-                                int countHero = UnitsExpand.Get_CountHerosShareXPFromThisUnit(u.Handle);
-                                if (countHero > 0)
+                                if (UnitsExpand.Get_Check(u.Handle))
                                 {
-                                    foreach (Hero h in UnitsExpand.Get_HerosShareXPFromThisUnit(u.Handle))
+                                    int countHero = UnitsExpand.Get_CountHerosShareXPFromThisUnit(u.Handle);
+                                    if (countHero > 0)
                                     {
-                                        int countUnit = HeroesExpand.Get_CountUnitsProvideXPToThisHero(h.Handle);
-                                        if (countUnit > 0)
+                                        foreach (Hero h in UnitsExpand.Get_HerosShareXPFromThisUnit(u.Handle))
                                         {
-                                            if (countUnit == 1)
+                                            int countUnit = HeroesExpand.Get_CountUnitsProvideXPToThisHero(h.Handle);
+                                            if (countUnit > 0)
                                             {
-                                                uint DifferentXP = HeroesExpand.Get_DifferentXP(h.Handle);
-                                                uint XPperHero = UnitsExpand.Get_XPperHero(u.Handle);
-                                                // Only 1 unit 
-                                                if (Math.Abs(DifferentXP - XPperHero) > 5)
+                                                if (countUnit == 1)
                                                 {
-                                                    //Console.WriteLine("--------------------------------------------------------------");
-                                                    //Console.WriteLine("Check for " + u.Name);
-                                                    uint NotVisibleEnemyHeroes = GetNotVisibleDangerEnemyHero(u.Position);
-                                                    if (NotVisibleEnemyHeroes > 0)
+                                                    uint DifferentXP = HeroesExpand.Get_DifferentXP(h.Handle);
+                                                    uint XPperHero = UnitsExpand.Get_XPperHero(u.Handle);
+                                                    // Only 1 unit 
+                                                    if (Math.Abs(DifferentXP - XPperHero) > 5)
                                                     {
-                                                        //float test = UnitsExpand.Get_BountyXP(u.Handle) / DifgerentXP;
-                                                        //Console.WriteLine("vTheoryGetXPHero = " + UnitsExpand.Get_BountyXP(u.Handle).ToString() + " / " + DifgerentXP.ToString() + " = " + test.ToString());
-                                                        uint vTheoryGetXPHero = UnitsExpand.Get_BountyXP(u.Handle) / DifferentXP;
-                                                        uint Get_CountHerosShareXPFromThisUnit = (uint)UnitsExpand.Get_CountHerosShareXPFromThisUnit(u.Handle);
-                                                        if (NotVisibleEnemyHeroes >= vTheoryGetXPHero - Get_CountHerosShareXPFromThisUnit)
+                                                        //Console.WriteLine("--------------------------------------------------------------");
+                                                        //Console.WriteLine("Check for " + u.Name);
+                                                        uint NotVisibleEnemyHeroes = GetNotVisibleDangerEnemyHero(u.Position);
+                                                        if (NotVisibleEnemyHeroes > 0)
                                                         {
-                                                            UnitsExpand.Set_AlarmCount(u.Handle, vTheoryGetXPHero - Get_CountHerosShareXPFromThisUnit);
-                                                            //Debug_1(2, u);
+                                                            //float test = UnitsExpand.Get_BountyXP(u.Handle) / DifgerentXP;
+                                                            //Console.WriteLine("vTheoryGetXPHero = " + UnitsExpand.Get_BountyXP(u.Handle).ToString() + " / " + DifgerentXP.ToString() + " = " + test.ToString());
+                                                            uint vTheoryGetXPHero = UnitsExpand.Get_BountyXP(u.Handle) / DifferentXP;
+                                                            uint Get_CountHerosShareXPFromThisUnit = (uint)UnitsExpand.Get_CountHerosShareXPFromThisUnit(u.Handle);
+                                                            if (NotVisibleEnemyHeroes >= vTheoryGetXPHero - Get_CountHerosShareXPFromThisUnit)
+                                                            {
+                                                                UnitsExpand.Set_AlarmCount(u.Handle, vTheoryGetXPHero - Get_CountHerosShareXPFromThisUnit);
+                                                                //Debug_1(2, u);
+                                                            }
+                                                            else
+                                                            {
+                                                                UnitsExpand.Set_AlarmCount(u.Handle, 5 + NotVisibleEnemyHeroes);
+                                                                //Debug_1(2, u);
+                                                            }
                                                         }
-                                                        else
+                                                    }
+                                                    //else
+                                                    //{
+                                                    //    Debug_1(1, u);
+                                                    //}
+                                                }
+                                                else
+                                                {
+                                                    // More 1 unit
+                                                    uint DifferentXP = HeroesExpand.Get_DifferentXP(h.Handle);
+                                                    uint TotalXPReviceTheory = HeroesExpand.Get_TotalReviceXPinTheory(h.Handle);
+                                                    if (Math.Abs(TotalXPReviceTheory - DifferentXP) > 5)
+                                                    {
+                                                        //Console.WriteLine("--------------------------------------------------------------");
+                                                        //Console.WriteLine("Check for " + u.Name);
+                                                        uint NotVisibleEnemyHeroes = GetNotVisibleDangerEnemyHero(u.Position);
+                                                        if (NotVisibleEnemyHeroes > 0)
                                                         {
                                                             UnitsExpand.Set_AlarmCount(u.Handle, 5 + NotVisibleEnemyHeroes);
                                                             //Debug_1(2, u);
                                                         }
                                                     }
+                                                    //else
+                                                    //{
+                                                    //    Debug_1(1, u);
+                                                    //}
                                                 }
-                                                //else
-                                                //{
-                                                //    Debug_1(1, u);
-                                                //}
-                                            }
-                                            else
-                                            {
-                                                // More 1 unit
-                                                uint DifferentXP = HeroesExpand.Get_DifferentXP(h.Handle);
-                                                uint TotalXPReviceTheory = HeroesExpand.Get_TotalReviceXPinTheory(h.Handle);
-                                                if (Math.Abs(TotalXPReviceTheory - DifferentXP) > 5)
-                                                {
-                                                    //Console.WriteLine("--------------------------------------------------------------");
-                                                    //Console.WriteLine("Check for " + u.Name);
-                                                    uint NotVisibleEnemyHeroes = GetNotVisibleDangerEnemyHero(u.Position);
-                                                    if (NotVisibleEnemyHeroes > 0)
-                                                    {
-                                                        UnitsExpand.Set_AlarmCount(u.Handle, 5 + NotVisibleEnemyHeroes);
-                                                        //Debug_1(2, u);
-                                                    }
-                                                }
-                                                //else
-                                                //{
-                                                //    Debug_1(1, u);
-                                                //}
                                             }
                                         }
                                     }
@@ -1531,8 +1535,12 @@ namespace ScanNotVisibleEnemy
                         }
                     }
                 }
+                #endregion
+
+                AllUnits.Clear();
+                AllHeros.Clear();
+                AllHeros.Clear();
             }
-            #endregion
         }
         #endregion
         static void Main(string[] args)
@@ -1686,48 +1694,44 @@ namespace ScanNotVisibleEnemy
 
             if (active)
             {
-                AllUnits = ObjectManager.GetEntities<Unit>().Where(x => x.UnitType != 1 && !x.IsIllusion).ToList();
-                if (AllUnits != null)
-                {
-                    if (AllUnits.Count > 0)
-                    {
-                        foreach (Unit v in AllUnits)
-                        {
-                            if (v.LifeState == LifeState.Dying)
-                            {
-                                if (UnitsExpand.Get_OldLifeState(v.Handle) == LifeState.Alive)
-                                {
-                                    UnitsExpand.Set_BountyXP(v.Handle, ListXP.Get_BoubtyXP(v.Name));
-                                    var EnemyHeroesShareEXP =  GetShareXPHeroes(v);
-                                    if (EnemyHeroesShareEXP != null)
-                                    {
-                                        if (EnemyHeroesShareEXP.Count > 0)
-                                        {
-                                            foreach (Hero h in EnemyHeroesShareEXP)
-                                            {
-                                                //Console.WriteLine("     - " + h.Name);
-                                                UnitsExpand.Add_HerosShareXPFromThisUnit(v.Handle, h);
-                                                HeroesExpand.Add_UnitsProvideXPToThisHero(h.Handle, v);
-                                            }
-                                        }
-                                    }
-                                    //Console.WriteLine("-------------------------------------------");
-                                }
-                            }
-                        }
-                    }
-                }
-                AlarmClear();
-
                 int sleepTime =  Menu.Item("DelayTime").GetValue<Slider>().Value;
                 if (Utils.SleepCheck("Delay time ..."))
                 {
+                    AllUnits = ObjectManager.GetEntities<Unit>().Where(x => 
+                        x.UnitType != 1 && 
+                        !x.IsIllusion &&
+                        x.LifeState == LifeState.Dying &&
+                        UnitsExpand.Get_OldLifeState(x.Handle) == LifeState.Alive).ToList();
+                    if (AllUnits != null)
+                    {
+                        if (AllUnits.Count > 0)
+                        {
+                            foreach (Unit v in AllUnits)
+                            {
+                                UnitsExpand.Set_BountyXP(v.Handle, ListXP.Get_BoubtyXP(v.Name));
+                                var EnemyHeroesShareEXP =  GetShareXPHeroes(v);
+                                if (EnemyHeroesShareEXP != null)
+                                {
+                                    if (EnemyHeroesShareEXP.Count > 0)
+                                    {
+                                        foreach (Hero h in EnemyHeroesShareEXP)
+                                        {
+                                            //Console.WriteLine("     - " + h.Name);
+                                            UnitsExpand.Add_HerosShareXPFromThisUnit(v.Handle, h);
+                                            HeroesExpand.Add_UnitsProvideXPToThisHero(h.Handle, v);
+                                        }
+                                    }
+                                }
+                                //Console.WriteLine("-------------------------------------------");
+                            }
+                        }
+                    }
+                    AlarmClear();
                     RelationAnalysys();
-                    Utils.Sleep(sleepTime, "Delay time ...");
+                    HeroesExpand.Update_VisibleHeroes();
+                    UnitsExpand.Update_UnitLifeState();
                 }
-
-                HeroesExpand.Update_VisibleHeroes();
-                UnitsExpand.Update_UnitLifeState();
+                Utils.Sleep(sleepTime, "Delay time ...");
             }
         }
         private static void Game_OnDraw(EventArgs args)
