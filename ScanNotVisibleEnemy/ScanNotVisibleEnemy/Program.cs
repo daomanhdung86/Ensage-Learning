@@ -1067,8 +1067,9 @@ namespace ScanNotVisibleEnemy
             public void Update_UnitLifeState()
             {
                 List.Clear();
-                
-                var AllUnit = ObjectManager.GetEntities<Unit>().Where(x => !x.IsIllusion).ToList();
+                var AllUnit = ObjectManager.GetEntities<Unit>().Where(x => 
+                    !x.IsIllusion &&
+                    x.LifeState == LifeState.Alive).ToList();
                 foreach (Unit v in AllUnit)
                 {
                     UnitExpand newExpandUnit = new UnitExpand(v);
@@ -1728,10 +1729,10 @@ namespace ScanNotVisibleEnemy
                     }
                     AlarmClear();
                     RelationAnalysys();
-                    HeroesExpand.Update_VisibleHeroes();
-                    UnitsExpand.Update_UnitLifeState();
+                    Utils.Sleep(sleepTime, "Delay time ...");
                 }
-                Utils.Sleep(sleepTime, "Delay time ...");
+                UnitsExpand.Update_UnitLifeState();
+                HeroesExpand.Update_VisibleHeroes();
             }
         }
         private static void Game_OnDraw(EventArgs args)
