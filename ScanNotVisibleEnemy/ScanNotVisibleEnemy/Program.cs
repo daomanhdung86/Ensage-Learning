@@ -1537,7 +1537,6 @@ namespace ScanNotVisibleEnemy
                     }
                 }
                 #endregion
-
                 AllUnits.Clear();
                 AllHeros.Clear();
                 AllHeros.Clear();
@@ -1727,10 +1726,10 @@ namespace ScanNotVisibleEnemy
                             }
                         }
                     }
-                    AlarmClear();
                     RelationAnalysys();
                     Utils.Sleep(sleepTime, "Delay time ...");
                 }
+                AlarmClear();
                 UnitsExpand.Update_UnitLifeState();
                 HeroesExpand.Update_VisibleHeroes();
             }
